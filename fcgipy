@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+import signal, scheduler, os, config, time, sys, daemonise as daemonise_
+from optparse import OptionParser
+
+def setup_signals(terminated):
+  def alarm_handler(signum, frame):
+    pass
+  signal.signal(signal.SIGALRM, alarm_handler)
+
+  def term_handler(signum, frame):
+    terminated[0] = True # ugh
+  signal.signal(signal.SIGTERM, term_handler)
+
+def main(config_file, debug=False, daemonise=True, pidfile=None):
+  terminated = [False]
+  setup_signals(terminated)
+
+  config_ = config.read_config(config_file)
+  sched = scheduler.Scheduler(config_)
+
+  if daemonise:
+    pid = daemonise_.daemonise()
+    if not debug:
+      daemonise_.close_fds()
+    if pidfile is not None:
+      daemonise_.write_pid(pidfile)
+
+  while not terminated[0]:
+    interrupted = False
+
+    if debug:
+      print sched
+    sched.run()
+
+    signal.alarm(1)
+    try:
+      (pid, status) = os.wait()
+    except OSError, (errno, strerror):
+      if errno == 4: # interrupted by alarm
+        interrupted = True
+      elif errno == 10: # nothing to wait for
+        signal.alarm(0)
+
+        interrupted = True # not true but pid is invalid
+
+        time.sleep(1) # we haven't waited any time at all!
+      else:
+        signal.alarm(0)
+        raise
+
+    if interrupted:
+      continue
+
+    sched.reap(pid)
+
+  for pid in sched.executing:
+    os.kill(pid, signal.SIGTERM)
+
+if __name__ == "__main__":
+  parser = OptionParser("usage: %prog [options] config_file")
+  parser.add_option("-n", "--no-daemonise", action="store_false", default=True, dest="daemonise", help="don't daemonise the program")
+  parser.add_option("-d", "--debug", action="store_true", default=False, dest="debug", help="activate debugging mode")
+  parser.add_option("-p", "--pidfile", dest="pidfile", metavar="PIDFILE", help="create a pid file at the given path")
+
+  (options, args) = parser.parse_args()
+
+  if len(args) != 1:
+    parser.error("Incorrect number of arguments")
+
+  # wtb better way of doing this
+  kwargs = {}
+  kwargs["daemonise"] = options.daemonise
+  kwargs["debug"] = options.debug
+  if options.pidfile is not None:
+    kwargs["pidfile"] = options.pidfile
+
+  main(args[0], **kwargs)

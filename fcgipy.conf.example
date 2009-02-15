@@ -1,0 +1,4 @@
+[foosite]
+uid=foosite-www
+program=/usr/bin/python
+args=/home/foosite/foosite/foosite.py fcgi 1180
