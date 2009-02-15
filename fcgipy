@@ -11,7 +11,7 @@ def setup_signals(terminated):
     terminated[0] = True # ugh
   signal.signal(signal.SIGTERM, term_handler)
 
-def main(config_file, debug=False, daemonise=True, pidfile=None):
+def main(config_file, debug=False, daemonise=True, pid_file=None):
   terminated = [False]
   setup_signals(terminated)
 
@@ -19,11 +19,9 @@ def main(config_file, debug=False, daemonise=True, pidfile=None):
   sched = scheduler.Scheduler(config_)
 
   if daemonise:
-    pid = daemonise_.daemonise()
+    daemonise_.daemonise(pid_file=pid_file)
     if not debug:
       daemonise_.close_fds()
-    if pidfile is not None:
-      daemonise_.write_pid(pidfile)
 
   while not terminated[0]:
     interrupted = False
@@ -56,6 +54,9 @@ def main(config_file, debug=False, daemonise=True, pidfile=None):
   for pid in sched.executing:
     os.kill(pid, signal.SIGTERM)
 
+  if pid_file and os.path.exists(pid_file):
+    os.unlink(pid_file)
+
 if __name__ == "__main__":
   parser = OptionParser("usage: %prog [options] config_file")
   parser.add_option("-n", "--no-daemonise", action="store_false", default=True, dest="daemonise", help="don't daemonise the program")
@@ -72,6 +73,6 @@ if __name__ == "__main__":
   kwargs["daemonise"] = options.daemonise
   kwargs["debug"] = options.debug
   if options.pidfile is not None:
-    kwargs["pidfile"] = options.pidfile
+    kwargs["pid_file"] = options.pidfile
 
   main(args[0], **kwargs)
