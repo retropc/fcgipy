@@ -21,7 +21,8 @@ def daemonise(pid_file=None):
     os.chdir("/")
     os.umask(0)
 
-    f.write("%d" % os.getpid())
+    if pid_file is not None:
+      f.write("%d" % os.getpid())
   finally:
     if pid_file is not None:
       f.close()
