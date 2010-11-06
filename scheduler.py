@@ -43,7 +43,7 @@ class Subprocess(object):
       print >>sys.stderr, "SOMETHING WENT WRONG EXECUTING %s" % self.fcgi 
       traceback.print_exc()
 
-    sys.exit(1)
+    os._exit(1)
 
   def __str__(self): return "<Subprocesss running: %s fcgi: %s>" % (self.running and "yes" or "no", repr(self.fcgi))
   def __repr__(self): return str(self)

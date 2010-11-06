@@ -10,13 +10,13 @@ def daemonise(pid_file=None):
 
     pid = os.fork()
     if pid:
-      sys.exit(0)
+      os._exit(0)
 
     os.setsid()
 
     pid = os.fork()
     if pid:
-      sys.exit(0)
+      os._exit(0)
 
     os.chdir("/")
     os.umask(0)
